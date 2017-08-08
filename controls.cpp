@@ -186,7 +186,8 @@ int main(int argc, char *argv[])
 
 
 
-
+    if(QuadStatus.id>3)
+{	
     theta = GetTheta();
     if(QuadStatus.mode == 0)
     {
@@ -252,16 +253,30 @@ int main(int argc, char *argv[])
 	    pose.pose.position.y = MAVpose.pose.pose.position.y;
 	    pose.pose.position.z = Default;
 	    local_pos_pub.publish(pose);
-      QuadStatus.reached = 'y';
-      Status_pub.publish(QuadStatus);
+	//QuadStatus.reached = 'y';
+      //Status_pub.publish(QuadStatus);
+
+	
 	}
         }
 
       count ++;
     }
+}
+else if(QuadStatus.id==1)
+{
+	   ROS_INFO("reaching x,y,z QuadStatus.id %d\n", QuadStatus.id);
+	    pose.pose.position.x = QuadStatus.x;
+	    pose.pose.position.y = QuadStatus.y;
+	    pose.pose.position.z = QuadStatus.z;
+	    local_pos_pub.publish(pose);
+	//QuadStatus.reached = 'y';
+      //Status_pub.publish(QuadStatus);
 
+	
+	}
+	
     ros::spinOnce();
-
 
   }
   return (0);
