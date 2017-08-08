@@ -119,7 +119,7 @@ int main(int argc, char *argv[])
   ros::Subscriber gbpose_sub_13 = n.subscribe("/robot13/odom", 100, groundbot13Callback); // subscriber to get ground bot position
   ros::Subscriber obspose_sub = n.subscribe("/robot3/odom", 100, obsCallback);
   ros::Subscriber Status_sub= n.subscribe("groundbot/tap", 10, StatusCallback);
-  ros::Publisher Status_pub = n.advertise<strategy::navigate_quad>
+  ros::Publisher Status_pub = n.advertise<strategy::navigate_quad>("groundbot/tap", 10);
   ros::Subscriber state_sub = n.subscribe<mavros_msgs::State>
             ("mavros/state", 10, state_cb);
   ros::Publisher local_pos_pub = n.advertise<geometry_msgs::PoseStamped>
@@ -252,8 +252,8 @@ int main(int argc, char *argv[])
 	    pose.pose.position.y = MAVpose.pose.pose.position.y;
 	    pose.pose.position.z = Default;
 	    local_pos_pub.publish(pose);
-      QuadStatus.reached = "y";
-      Status_pub(QuadStatus);
+      QuadStatus.reached = 'y';
+      Status_pub.publish(QuadStatus);
 	}
         }
 
