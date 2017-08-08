@@ -25,7 +25,7 @@
 
 #define step 0.1              // step for changing altitude gradually
 #define Eps 0.2             // range for error
-#define Default 1          // Default height for the quad
+#define Default 2.5          // Default height for the quad
 #define Delay 5             // time duration for which it is idle in front of the ground bot
 #define GBHeight 0.2
 #define Epsz 0.1
@@ -62,6 +62,7 @@ int flag = 0;
 int check = 0;
 int count = 0;
 int status;
+int flag_reached = 0;
 double yaw, pitch, roll;
 
 
@@ -119,7 +120,7 @@ int main(int argc, char *argv[])
   ros::Subscriber gbpose_sub_13 = n.subscribe("/robot13/odom", 100, groundbot13Callback); // subscriber to get ground bot position
   ros::Subscriber obspose_sub = n.subscribe("/robot3/odom", 100, obsCallback);
   ros::Subscriber Status_sub= n.subscribe("groundbot/tap", 10, StatusCallback);
-  ros::Publisher Status_pub = n.advertise<strategy::navigate_quad>
+  ros::Publisher Status_pub = n.advertise<strategy::navigate_quad>("groundbot/tap", 10);
   ros::Subscriber state_sub = n.subscribe<mavros_msgs::State>
             ("mavros/state", 10, state_cb);
   ros::Publisher local_pos_pub = n.advertise<geometry_msgs::PoseStamped>
@@ -186,7 +187,8 @@ int main(int argc, char *argv[])
 
 
 
-
+    if(QuadStatus.id>3&&QuadStatus.reached!='y')
+{	
     theta = GetTheta();
     if(QuadStatus.mode == 0)
     {
@@ -252,16 +254,48 @@ int main(int argc, char *argv[])
 	    pose.pose.position.y = MAVpose.pose.pose.position.y;
 	    pose.pose.position.z = Default;
 	    local_pos_pub.publish(pose);
-      QuadStatus.reached = "y";
-      Status_pub(QuadStatus);
+	QuadStatus.reached = 'y';
+      
 	}
         }
 
       count ++;
     }
-
+}
+else if(QuadStatus.id==1&&QuadStatus.reached!='y')
+{
+	   ROS_INFO("reaching x,y,z QuadStatus.id %d\n", QuadStatus.id);
+	    pose.pose.position.x = QuadStatus.x;
+	    pose.pose.position.y = QuadStatus.y;
+	    pose.pose.position.z = QuadStatus.z;
+	    local_pos_pub.publish(pose);
+	}
+	if((MAVpose.pose.pose.position.x-QuadStatus.x)<Eps&&(MAVpose.pose.pose.position.y-QuadStatus.y)<Eps&&(MAVpose.pose.pose.position.z-QuadStatus.z)<Eps)
+		QuadStatus.reached='y';
+	/*if(
+	
+	if(flag_reached==1)
+	{ 
+		Status_pub.publish(QuadStatus);
+		flag_reached=0;
+	}*/
+	else if(QuadStatus.reached=='y')
+	{	
+		ROS_INFO("publishing reached\n \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
+		Status_pub.publish(QuadStatus);
+		flag=0;
+	}
+	while(QuadStatus.reached=='y'&&ros::ok())
+		{
+			pose.pose.position.x = MAVpose.pose.pose.position.x;
+	    		pose.pose.position.y = MAVpose.pose.pose.position.y;
+	    		pose.pose.position.z = Default;
+	    		local_pos_pub.publish(pose);
+			ros::spinOnce();
+		}
+	ROS_INFO("flag %d\n", flag);
+	
     ros::spinOnce();
-
 
   }
   return (0);
