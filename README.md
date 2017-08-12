@@ -5,7 +5,7 @@
 
  -New topic added :topic name : groundbot/tap
  +
- 
+
  +
  +                topic name : groundbot/tap
                   message type - strategy/navigate_quad
@@ -15,5 +15,7 @@
                   float64 y
                   float64 z
 
- +                (mode 1 for tap in int32 mode and 0 for bump i.e land in front for 180 degree turn)
- +                (id = 1 for navigating to a point, 4-13 for groundbots)
+ +                mode = 1 for tap in int32 mode
+                       = 0 for bump i.e land in front for 180 degree turn
+                       = -1 for just following the groundbot
+ +                id = 1 for navigating to a point, 4-13 for groundbots
