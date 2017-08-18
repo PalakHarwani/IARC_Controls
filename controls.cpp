@@ -22,6 +22,7 @@
 #include <mavros_msgs/SetMode.h>
 #include <mavros_msgs/State.h>
 #include "strategy/navigate_quad.h" //message type for strategy with groundbot/tap topic
+#include <std_srvs/SetBool.h>
 
 #define step 0.1              // step for changing altitude gradually
 #define Eps 0.2             // range for error
@@ -55,12 +56,30 @@ int status;
 int flag_reached = 0;
 double yaw, pitch, roll;
 int i;
+bool e_land = false;
 
+mavros_msgs::SetMode land_set_mode;
+land_set_mode.request.custom_mode = "AUTOLAND";
 
 mavros_msgs::State current_state;
 void state_cb(const mavros_msgs::State::ConstPtr& msg)
 {
     current_state = *msg;
+}
+
+bool land(std_srvs::SetBool::Request &req, std_srvs::SetBool::Response: &res)
+{
+
+  if(req.data == true)
+  {
+    e_land = true;
+    if( set_mode_client.call(land_set_mode) && land_set_mode.response.success)
+        {
+        ROS_INFO("emergency landing");
+        }
+  }
+
+  return true;
 }
 
 
@@ -82,13 +101,19 @@ void descent();
 void ascent();
 double kp;
 
+
+
+ros::NodeHandle n;
+ros::ServiceClient arming_client = n.serviceClient<mavros_msgs::CommandBool>("mavros/cmd/arming");
+ros::ServiceClient set_mode_client = n.serviceClient<mavros_msgs::SetMode>("mavros/set_mode");
+ros::ServiceServer emergency_land = n.advertiseService("emergency_land", land); //check within "" !!
+
 int main(int argc, char *argv[])
 {
   ros::init(argc,argv,"controls");
 
   kp=std::atof(argv[1]);//0.08
 
-  ros::NodeHandle n;
   ros::Subscriber imu_yaw = n.subscribe("mavros/local_position/odom", 10, feedbackfn);
   ros::Subscriber gbpose_sub = n.subscribe("/robot/odom", 100, groundbotCallback); // subscriber to get ground bot position
   ros::Subscriber obspose_sub = n.subscribe("/robot3/odom", 100, obsCallback);
@@ -96,8 +121,6 @@ int main(int argc, char *argv[])
   ros::Publisher Status_pub = n.advertise<strategy::navigate_quad>("groundbot/tap", 10);
   ros::Subscriber state_sub = n.subscribe<mavros_msgs::State>("mavros/state", 10, state_cb);
   ros::Publisher local_pos_pub = n.advertise<geometry_msgs::PoseStamped>("mavros/setpoint_position/local", 10);
-  ros::ServiceClient arming_client = n.serviceClient<mavros_msgs::CommandBool>("mavros/cmd/arming");
-  ros::ServiceClient set_mode_client = n.serviceClient<mavros_msgs::SetMode>("mavros/set_mode");
 
   ros::Rate rate(20.0);
 
@@ -128,6 +151,8 @@ int main(int argc, char *argv[])
         rate.sleep();
     }
 
+
+
     mavros_msgs::SetMode offb_set_mode;
     offb_set_mode.request.custom_mode = "OFFBOARD";
 
@@ -139,6 +164,8 @@ int main(int argc, char *argv[])
 
   while(ros::ok())
   {
+    if(bool == false)
+    {
     if( current_state.mode != "OFFBOARD" &&   (ros::Time::now() - last_request > ros::Duration(5.0)))
     {
         if( set_mode_client.call(offb_set_mode) && offb_set_mode.response.success)
@@ -280,7 +307,18 @@ int main(int argc, char *argv[])
     ros::spinOnce();
 
   }
+  else
+  {
+      if( set_mode_client.call(land_set_mode) && land_set_mode.response.success)
+          {
+          ROS_INFO("emergency landing");
+          }
+  }
+}
+
+
   return (0);
+
 }
 
 void StatusCallback(const strategy::navigate_quad::ConstPtr& msg)
