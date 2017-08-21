@@ -58,8 +58,6 @@ double yaw, pitch, roll;
 int i;
 bool e_land = false;
 
-mavros_msgs::SetMode land_set_mode;
-land_set_mode.request.custom_mode = "AUTOLAND";
 
 mavros_msgs::State current_state;
 void state_cb(const mavros_msgs::State::ConstPtr& msg)
@@ -67,17 +65,11 @@ void state_cb(const mavros_msgs::State::ConstPtr& msg)
     current_state = *msg;
 }
 
-bool land(std_srvs::SetBool::Request &req, std_srvs::SetBool::Response: &res)
+bool land(std_srvs::SetBool::Request &req, std_srvs::SetBool::Response &res)
 {
 
   if(req.data == true)
-  {
     e_land = true;
-    if( set_mode_client.call(land_set_mode) && land_set_mode.response.success)
-        {
-        ROS_INFO("emergency landing");
-        }
-  }
 
   return true;
 }
@@ -103,17 +95,17 @@ double kp;
 
 
 
-ros::NodeHandle n;
-ros::ServiceClient arming_client = n.serviceClient<mavros_msgs::CommandBool>("mavros/cmd/arming");
-ros::ServiceClient set_mode_client = n.serviceClient<mavros_msgs::SetMode>("mavros/set_mode");
-ros::ServiceServer emergency_land = n.advertiseService("emergency_land", land); //check within "" !!
-
 int main(int argc, char *argv[])
 {
   ros::init(argc,argv,"controls");
 
   kp=std::atof(argv[1]);//0.08
 
+  ros::NodeHandle n;
+
+  ros::ServiceClient arming_client = n.serviceClient<mavros_msgs::CommandBool>("mavros/cmd/arming");
+  ros::ServiceClient set_mode_client = n.serviceClient<mavros_msgs::SetMode>("mavros/set_mode");
+  ros::ServiceServer emergency_land = n.advertiseService("emergency_land", land); //check within "" !!
   ros::Subscriber imu_yaw = n.subscribe("mavros/local_position/odom", 10, feedbackfn);
   ros::Subscriber gbpose_sub = n.subscribe("/robot/odom", 100, groundbotCallback); // subscriber to get ground bot position
   ros::Subscriber obspose_sub = n.subscribe("/robot3/odom", 100, obsCallback);
@@ -164,7 +156,7 @@ int main(int argc, char *argv[])
 
   while(ros::ok())
   {
-    if(bool == false)
+    if(e_land == false)
     {
     if( current_state.mode != "OFFBOARD" &&   (ros::Time::now() - last_request > ros::Duration(5.0)))
     {
@@ -309,6 +301,9 @@ int main(int argc, char *argv[])
   }
   else
   {
+    mavros_msgs::SetMode land_set_mode;
+    land_set_mode.request.custom_mode = "AUTOLAND";
+
       if( set_mode_client.call(land_set_mode) && land_set_mode.response.success)
           {
           ROS_INFO("emergency landing");
